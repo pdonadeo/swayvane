@@ -210,6 +210,36 @@ One rough edge: what to restore lives in the running program, so if it is
 restarted while a window is maximized, that layout stays tabbed. Removing the
 mark and pressing your "toggle split" binding sorts it out.
 
+### Exposé
+
+Tabs and stacks are a great way to keep a workspace tidy, and an equally good
+way to forget what is in it. With `--expose` one key lays out every window of
+the focused workspace side by side, and pressing it again puts everything back
+the way it was:
+
+```
+bindsym XF86Tools nop ws-rename-expose
+```
+
+Any key will do; `nop` is a Sway command that does nothing, but Sway still
+reports the binding to the programs listening, which is how this one hears
+about it. Under the hood every tabbed or stacked container on the workspace is
+turned into a split — side by side if it is wider than tall, one above the
+other otherwise — and back again: no window is moved, so there is nothing that
+could end up in the wrong place.
+
+A tabbed container shows the window that last had the focus, so the exposé
+doubles as a window picker: move the focus to the window you are after, with
+the mouse or the keyboard, and press the key again to land on it. Pressing the
+key on another workspace ends the exposé on the first one and starts it there.
+While it lasts, `--autotiling` and `--maximize` stand aside, so that they do not
+rearrange what the exposé has just laid out.
+
+It only shows what fits: a tabbed container with many windows in a narrow
+column becomes as many narrow slivers. And as with maximize, what to restore
+lives in the running program, so restarting it in the middle of an exposé
+leaves the containers split.
+
 ## Running it
 
 Add a line like this to your Sway configuration file so the program starts
@@ -228,6 +258,7 @@ Available command-line options:
 | `-c`, `--conf`    | Path to a specific `app-icons.json` file, if you don't want to rely on the default locations. |
 | `--autotiling`    | Keep the split direction of the focused window matched to its shape. |
 | `--maximize`      | Give the window marked `_wsr_max` the whole workspace until the mark is removed, keeping the bar, the gaps and the layout. |
+| `--expose`        | Lay out every window of the focused workspace side by side, tabbed and stacked ones included, until the key bound to `nop ws-rename-expose` is pressed again. |
 | `--split-ratio`   | Percentage of the container given to a newly opened window (default: 30; 50 splits evenly). Requires `--autotiling`. |
 | `--tab-min-width` | Smallest width, in pixels, a new window may get out of a horizontal split; below it the container is made tabbed instead (default: 500; 0 disables). Requires `--autotiling`. |
 | `--stack-min-height` | The same for a vertical split, where the container is stacked instead (default: 300; 0 disables). Requires `--autotiling`. |

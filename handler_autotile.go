@@ -35,6 +35,9 @@ type autotileHandler struct {
 	// undone once they are back to a single window. Containers tabbed by hand
 	// are deliberately absent: those are the user's, and stay as they are.
 	autoTabbed map[NodeID]string
+	// paused, when set and true, makes the handler ignore every event: see
+	// exposeHandler.
+	paused func() bool
 }
 
 func newAutotileHandler(splitRatio, tabMinWidth, stackMinHeight int) *autotileHandler {
@@ -49,6 +52,9 @@ func newAutotileHandler(splitRatio, tabMinWidth, stackMinHeight int) *autotileHa
 func (h *autotileHandler) Name() string { return "autotiling" }
 
 func (h *autotileHandler) HandleWindow(ctx *WindowContext) error {
+	if h.paused != nil && h.paused() {
+		return nil
+	}
 	switch ctx.Info.Change {
 	case WinClose:
 		return h.flattenAutoTabbed(ctx)

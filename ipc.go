@@ -121,8 +121,13 @@ type Event interface{ isEvent() }
 type WindowEvent struct{ Info WindowEventInfo }
 type ShutdownEvent struct{ Reason ShutdownReason }
 
+// BindingEvent reports a key binding Sway has just run, with the command as
+// written in the configuration.
+type BindingEvent struct{ Command string }
+
 func (WindowEvent) isEvent()   {}
 func (ShutdownEvent) isEvent() {}
+func (BindingEvent) isEvent()  {}
 
 type rawMsg struct {
 	ty      uint32
@@ -358,6 +363,17 @@ func parseEvent(ty uint32, payload []byte) (Event, error) {
 			change = WinUnknown
 		}
 		return WindowEvent{Info: WindowEventInfo{Change: change, Container: raw.Container}}, nil
+
+	case 5: // binding
+		var raw struct {
+			Binding struct {
+				Command string `json:"command"`
+			} `json:"binding"`
+		}
+		if err := json.Unmarshal(payload, &raw); err != nil {
+			return nil, err
+		}
+		return BindingEvent{Command: raw.Binding.Command}, nil
 
 	case 6: // shutdown
 		var raw struct {

@@ -66,6 +66,9 @@ func eventLoop(disp *dispatcher, conn *Conn, sigCh <-chan os.Signal, log *slog.L
 			case WindowEvent:
 				log.Debug("EVENT", "change", e.Info.Change)
 				disp.dispatch(conn, e.Info)
+			case BindingEvent:
+				log.Debug("BINDING", "command", e.Command)
+				disp.dispatchBinding(conn, e.Command)
 			case ShutdownEvent:
 				shutdownReason = e.Reason
 				if e.Reason == ShutdownExit {
@@ -87,7 +90,7 @@ func protectedLoop(disp *dispatcher, sigCh <-chan os.Signal, log *slog.Logger) e
 		if err != nil {
 			return fmt.Errorf("connect: %w", err)
 		}
-		if err := conn.Subscribe([]string{"window", "shutdown"}); err != nil {
+		if err := conn.Subscribe(disp.subscriptions()); err != nil {
 			conn.Close()
 			return fmt.Errorf("subscribe: %w", err)
 		}
@@ -125,6 +128,7 @@ var longFlagNames = map[string]bool{
 	"version":          true,
 	"autotiling":       true,
 	"maximize":         true,
+	"expose":           true,
 	"split-ratio":      true,
 	"tab-min-width":    true,
 	"stack-min-height": true,
@@ -185,6 +189,7 @@ func main() {
 		showVersion    bool
 		autotiling     bool
 		maximize       bool
+		expose         bool
 		toStderr       bool
 		splitRatio     int
 		tabMinWidth    int
@@ -212,6 +217,10 @@ func main() {
 		"Give the window marked "+maximizeMark+" the whole workspace until the "+
 			"mark is removed, bar and gaps respected and the layout kept "+
 			"(bind it with: bindsym $mod+z mark --add --toggle "+maximizeMark+")")
+	flag.BoolVar(&expose, "expose", false,
+		"Show every window of the focused workspace side by side, tabbed and "+
+			"stacked ones included, until the binding is pressed again "+
+			"(bind it with: bindsym <key> nop "+exposeCommand+")")
 	flag.IntVar(&tabMinWidth, "tab-min-width", 500,
 		"Minimum width in pixels a new window may get out of a horizontal "+
 			"split: below it the container is made tabbed instead, so both "+
@@ -305,15 +314,34 @@ func main() {
 		}
 	}
 
+	// The exposé reshapes the layout for a while and the other layout
+	// handlers must leave it alone until it is over, so they are told about it
+	// before they are created.
+	var paused func() bool
+	var exposeH *exposeHandler
+	if expose {
+		exposeH = newExposeHandler()
+		paused = exposeH.active
+	}
+
 	if autotiling {
-		handlers = append(handlers, newAutotileHandler(splitRatio, tabMinWidth, stackMinHeight))
+		h := newAutotileHandler(splitRatio, tabMinWidth, stackMinHeight)
+		h.paused = paused
+		handlers = append(handlers, h)
 		log.Info("autotiling enabled", "split_ratio", splitRatio,
 			"tab_min_width", tabMinWidth, "stack_min_height", stackMinHeight)
 	}
 
 	if maximize {
-		handlers = append(handlers, newMaximizeHandler())
+		h := newMaximizeHandler()
+		h.paused = paused
+		handlers = append(handlers, h)
 		log.Info("maximize enabled", "mark", maximizeMark)
+	}
+
+	if exposeH != nil {
+		handlers = append(handlers, exposeH)
+		log.Info("exposé enabled", "binding", "nop "+exposeCommand)
 	}
 
 	handlers = append(handlers, newIconHandler(conf))

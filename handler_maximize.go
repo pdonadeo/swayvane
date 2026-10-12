@@ -32,6 +32,9 @@ type maximizeHandler struct {
 	window NodeID
 	// restore lists what to put back, innermost container first.
 	restore []layoutRestore
+	// paused, when set and true, makes the handler ignore every event: see
+	// exposeHandler.
+	paused func() bool
 }
 
 // layoutRestore records one container's previous layout. The container is not
@@ -50,6 +53,9 @@ func newMaximizeHandler() *maximizeHandler { return &maximizeHandler{} }
 func (h *maximizeHandler) Name() string { return "maximize" }
 
 func (h *maximizeHandler) HandleWindow(ctx *WindowContext) error {
+	if h.paused != nil && h.paused() {
+		return nil
+	}
 	switch ctx.Info.Change {
 	case WinMark:
 	case WinClose, WinMove:

@@ -18,6 +18,18 @@ type WindowHandler interface {
 	HandleWindow(ctx *WindowContext) error
 }
 
+// BindingHandler is implemented by handlers that are also driven by key
+// bindings. Sway reports every binding it runs, `nop` ones included, so a
+// binding like `bindsym F3 nop something` reaches the daemon without a command
+// socket of its own. The daemon only subscribes to binding events when at
+// least one handler implements this.
+type BindingHandler interface {
+	// HandleBinding is called for every binding Sway runs; the command is the
+	// one written in the configuration, and recognizing it is up to the
+	// handler. ctx.Info carries no window: Info.Change is WinUnknown.
+	HandleBinding(ctx *WindowContext, command string) error
+}
+
 // ── Per-event context ─────────────────────────────────────────────────────────
 
 // WindowContext is everything a handler gets to see and do about a single
@@ -91,13 +103,35 @@ func newDispatcher(log *slog.Logger, handlers ...WindowHandler) *dispatcher {
 func (d *dispatcher) dispatch(conn *Conn, info WindowEventInfo) {
 	ctx := &WindowContext{Info: info, conn: conn}
 	for _, h := range d.handlers {
-		d.runOne(h, ctx)
+		d.runOne(h, ctx, h.HandleWindow)
 	}
+}
+
+func (d *dispatcher) dispatchBinding(conn *Conn, command string) {
+	ctx := &WindowContext{Info: WindowEventInfo{Change: WinUnknown}, conn: conn}
+	for _, h := range d.handlers {
+		if bh, ok := h.(BindingHandler); ok {
+			d.runOne(h, ctx, func(ctx *WindowContext) error {
+				return bh.HandleBinding(ctx, command)
+			})
+		}
+	}
+}
+
+// subscriptions lists the Sway events the registered handlers need.
+func (d *dispatcher) subscriptions() []string {
+	events := []string{"window", "shutdown"}
+	for _, h := range d.handlers {
+		if _, ok := h.(BindingHandler); ok {
+			return append(events, "binding")
+		}
+	}
+	return events
 }
 
 // runOne keeps handlers in separate fault domains: a panic or an error in one
 // of them is logged but neither stops the others nor brings the daemon down.
-func (d *dispatcher) runOne(h WindowHandler, ctx *WindowContext) {
+func (d *dispatcher) runOne(h WindowHandler, ctx *WindowContext, handle func(*WindowContext) error) {
 	defer func() {
 		if r := recover(); r != nil {
 			d.log.Error("handler panicked", "handler", h.Name(),
@@ -105,7 +139,7 @@ func (d *dispatcher) runOne(h WindowHandler, ctx *WindowContext) {
 		}
 	}()
 	ctx.Log = d.log.With("handler", h.Name())
-	if err := h.HandleWindow(ctx); err != nil {
+	if err := handle(ctx); err != nil {
 		ctx.Log.Error("handler failed", "error", err)
 	}
 }
