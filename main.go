@@ -95,6 +95,7 @@ func protectedLoop(disp *dispatcher, sigCh <-chan os.Signal, log *slog.Logger) e
 			return fmt.Errorf("subscribe: %w", err)
 		}
 		log.Debug("connected to Sway")
+		disp.dispatchConnect(conn)
 
 		reconnect := eventLoop(disp, conn, sigCh, log)
 		conn.Close()
@@ -215,7 +216,8 @@ func main() {
 			"Requires --autotiling")
 	flag.BoolVar(&maximize, "maximize", false,
 		"Give the window marked "+maximizeMark+" the whole workspace until the "+
-			"mark is removed, bar and gaps respected and the layout kept "+
+			"mark is removed, bar and gaps respected, parking the other windows "+
+			"on workspace "+maximizeStash+" meanwhile "+
 			"(bind it with: bindsym $mod+z mark --add --toggle "+maximizeMark+")")
 	flag.BoolVar(&expose, "expose", false,
 		"Show every window of the focused workspace side by side, tabbed and "+
@@ -335,8 +337,9 @@ func main() {
 	if maximize {
 		h := newMaximizeHandler()
 		h.paused = paused
+		h.expose = expose
 		handlers = append(handlers, h)
-		log.Info("maximize enabled", "mark", maximizeMark)
+		log.Info("maximize enabled", "mark", maximizeMark, "stash", maximizeStash)
 	}
 
 	if exposeH != nil {

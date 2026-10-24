@@ -142,6 +142,11 @@ func (h *iconHandler) HandleWindow(ctx *WindowContext) error {
 		return fmt.Errorf("get_tree: %w", err)
 	}
 	for _, ws := range getWorkspaceNodes(tree) {
+		// The windows parked there by maximize belong to another workspace,
+		// and the name says so.
+		if ws.Name != nil && *ws.Name == maximizeStash {
+			continue
+		}
 		if err := h.renameWorkspace(ctx, ws); err != nil {
 			ctx.Log.Error("rename_workspace failed", "error", err)
 		}

@@ -53,7 +53,7 @@ func (h *exposeHandler) active() bool { return h.workspace != "" }
 func (h *exposeHandler) HandleWindow(*WindowContext) error { return nil }
 
 func (h *exposeHandler) HandleBinding(ctx *WindowContext, command string) error {
-	if f := strings.Fields(command); len(f) != 2 || f[0] != "nop" || f[1] != exposeCommand {
+	if !isNopBinding(command, exposeCommand) {
 		return nil
 	}
 	tree, err := ctx.Tree()
@@ -198,13 +198,7 @@ func (h *exposeHandler) restoreLayout(ctx *WindowContext) error {
 		if node == nil || len(node.Nodes) == 0 || node.Layout != r.split {
 			continue
 		}
-		// Note "stacking" and not "stacked": the word the layout command takes
-		// is not the one the tree reports back for the same layout.
-		layout := r.layout
-		if layout == "stacked" {
-			layout = "stacking"
-		}
-		cmd := layoutCommand(node.NodeType == "workspace", node.Nodes[0].ID, layout, refocusCommand(tree))
+		cmd := layoutCommand(node.NodeType == "workspace", node.Nodes[0].ID, layoutWord(r.layout), refocusCommand(tree))
 		if err := ctx.Command(cmd); err != nil {
 			return err
 		}
@@ -235,6 +229,22 @@ func layoutCommand(isWorkspace bool, child NodeID, layout, refocus string) strin
 		cmd += "; " + refocus
 	}
 	return cmd
+}
+
+// layoutWord turns a layout as the tree reports it into the word the layout
+// command takes for it: "stacked" is reported, but "stacking" is the command.
+func layoutWord(layout string) string {
+	if layout == "stacked" {
+		return "stacking"
+	}
+	return layout
+}
+
+// isNopBinding tells whether a binding's command is `nop` with the given
+// argument, the way bindings for this daemon are written.
+func isNopBinding(command, arg string) bool {
+	f := strings.Fields(command)
+	return len(f) == 2 && f[0] == "nop" && f[1] == arg
 }
 
 // refocusCommand returns the command that gives the focus back to whatever

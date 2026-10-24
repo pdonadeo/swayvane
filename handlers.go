@@ -30,6 +30,13 @@ type BindingHandler interface {
 	HandleBinding(ctx *WindowContext, command string) error
 }
 
+// ConnectHandler is implemented by handlers that have something to do as soon
+// as the daemon is connected, before any event: typically finishing what a
+// previous run left halfway.
+type ConnectHandler interface {
+	HandleConnect(ctx *WindowContext) error
+}
+
 // ── Per-event context ─────────────────────────────────────────────────────────
 
 // WindowContext is everything a handler gets to see and do about a single
@@ -114,6 +121,15 @@ func (d *dispatcher) dispatchBinding(conn *Conn, command string) {
 			d.runOne(h, ctx, func(ctx *WindowContext) error {
 				return bh.HandleBinding(ctx, command)
 			})
+		}
+	}
+}
+
+func (d *dispatcher) dispatchConnect(conn *Conn) {
+	ctx := &WindowContext{Info: WindowEventInfo{Change: WinUnknown}, conn: conn}
+	for _, h := range d.handlers {
+		if ch, ok := h.(ConnectHandler); ok {
+			d.runOne(h, ctx, ch.HandleConnect)
 		}
 	}
 }
