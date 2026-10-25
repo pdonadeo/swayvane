@@ -632,9 +632,13 @@ func findWorkspaceByName(root *Node, name string) *Node {
 	return found
 }
 
-// swayQuote quotes a string as an argument of a Sway command.
+// swayQuote quotes a workspace name as an argument of a Sway command.
+//
+// Nothing is escaped: `workspace`, `rename` and `move to workspace` take what
+// is between the quotes as it is, backslashes included. A double quote cannot
+// be written at all (Sway drops it), so no workspace name ever holds one.
 func swayQuote(s string) string {
-	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"`
+	return `"` + s + `"`
 }
 
 // findMarkedWindow returns the window carrying the given mark. Sway keeps a

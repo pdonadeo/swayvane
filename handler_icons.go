@@ -182,5 +182,5 @@ func (h *iconHandler) renameWorkspace(ctx *WindowContext, ws *Node) error {
 		return nil
 	}
 
-	return ctx.Command(fmt.Sprintf(`rename workspace "%s" to "%s"`, wsName, newName))
+	return ctx.Command(fmt.Sprintf("rename workspace %s to %s", swayQuote(wsName), swayQuote(newName)))
 }
