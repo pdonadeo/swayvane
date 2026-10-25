@@ -260,7 +260,9 @@ func refocusCommand(root *Node) string {
 	case focused == nil:
 		return ""
 	case focused.NodeType == "workspace" && focused.Name != nil:
-		return fmt.Sprintf("workspace --no-auto-back-and-forth %q", *focused.Name)
+		// Not %q: Go would escape the icons, which are private-use
+		// characters, and Sway would read the escapes literally.
+		return "workspace --no-auto-back-and-forth " + swayQuote(*focused.Name)
 	default:
 		return fmt.Sprintf("[con_id=%s] focus", focused.ID)
 	}
