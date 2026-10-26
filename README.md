@@ -246,6 +246,38 @@ column becomes as many narrow slivers. And what to restore lives in the running
 program, so restarting it in the middle of an exposé leaves the containers
 split.
 
+### Scattered exposé
+
+`--scatter` is the exposé taken one step further, closer to the one on macOS:
+every window of the focused workspace leaves the layout, becomes floating and
+is dealt out on a grid, roughly in the order they were on screen. Click a
+window and everything goes back in place, with the focus on it; pressing the
+key again does the same, keeping the focus where it was:
+
+```
+bindsym $mod+F4 nop ws-rename-scatter
+```
+
+Unlike macOS, Sway cannot shrink what a window shows, so these are not
+thumbnails: each window really gets smaller, and redraws itself to fit — a
+terminal wraps its lines, a web page may switch to its mobile layout — and
+again on the way back. Windows that were floating already are dealt out too,
+and go back where they were.
+
+Any focus change ends it: a click on a window, but also moving the focus with
+the keyboard or opening a new window. For the same reason the focus stops
+following the mouse while it lasts, or crossing a window on the way to another
+would pick it; afterwards `focus_follows_mouse` is set back to `yes`, Sway's
+default. Windows closed meanwhile are simply left out, windows opened meanwhile
+go in wherever Sway puts a new window. Pressing the key on another workspace
+puts the first one back and scatters the second.
+
+It can be on together with `--expose`, on another key: each key ends the
+other mode. When the exposé is on, or a window is maximized, the key only ends
+that, and a second press scatters. What to restore is kept in
+`$XDG_RUNTIME_DIR/ws-rename/scatter.json`, so restarting the program in the
+middle puts the workspace back as soon as it starts.
+
 ## Running it
 
 Add a line like this to your Sway configuration file so the program starts
@@ -265,6 +297,7 @@ Available command-line options:
 | `--autotiling`    | Keep the split direction of the focused window matched to its shape. |
 | `--maximize`      | Give the window marked `_wsr_max` the whole workspace until the mark is removed, keeping the bar and the gaps; the other windows wait on workspace `11:⏸`. |
 | `--expose`        | Lay out every window of the focused workspace side by side, tabbed and stacked ones included, until the key bound to `nop ws-rename-expose` is pressed again. |
+| `--scatter`       | Take every window of the focused workspace out of the layout and deal them out as floating windows, until one is clicked or the key bound to `nop ws-rename-scatter` is pressed again. |
 | `--split-ratio`   | Percentage of the container given to a newly opened window (default: 30; 50 splits evenly). Requires `--autotiling`. |
 | `--tab-min-width` | Smallest width, in pixels, a new window may get out of a horizontal split; below it the container is made tabbed instead (default: 500; 0 disables). Requires `--autotiling`. |
 | `--stack-min-height` | The same for a vertical split, where the container is stacked instead (default: 300; 0 disables). Requires `--autotiling`. |

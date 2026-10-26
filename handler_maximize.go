@@ -56,9 +56,10 @@ type maximizeHandler struct {
 	// parked windows are brought back even then. Empty when there is nowhere
 	// to keep it.
 	stateFile string
-	// expose, when set, makes the exposé binding end a maximize first: the
-	// exposé is there to show every window, and most of them are parked.
-	expose bool
+	// endOn lists the `nop` bindings that end a maximize first: those of the
+	// exposés, which are there to show every window, and most of them are
+	// parked.
+	endOn []string
 	// paused, when set and true, makes the handler ignore every event: see
 	// exposeHandler.
 	paused func() bool
@@ -120,15 +121,17 @@ func (h *maximizeHandler) HandleConnect(ctx *WindowContext) error {
 	return h.restoreLayout(ctx)
 }
 
-// HandleBinding ends a maximize when the exposé is called for.
+// HandleBinding ends a maximize when an exposé is called for.
 func (h *maximizeHandler) HandleBinding(ctx *WindowContext, command string) error {
-	if !h.expose || h.plan == nil || (h.paused != nil && h.paused()) {
+	if h.plan == nil || (h.paused != nil && h.paused()) {
 		return nil
 	}
-	if !isNopBinding(command, exposeCommand) {
-		return nil
+	for _, arg := range h.endOn {
+		if isNopBinding(command, arg) {
+			return h.restoreLayout(ctx)
+		}
 	}
-	return h.restoreLayout(ctx)
+	return nil
 }
 
 func (h *maximizeHandler) HandleWindow(ctx *WindowContext) error {
@@ -488,15 +491,8 @@ func (h *maximizeHandler) rebuildWrappers(ctx *WindowContext, p *maximizePlan) e
 
 // restoreProportions gives the window's container back the proportions it had.
 // Putting the window in again gives it an even share, taken from the others.
-//
-// `resize set` would not do: it takes the difference from both neighbours, so
-// fixing one child unsettles the one fixed before it. Growing a child towards
-// its right (or bottom) edge only moves the border it shares with the next
-// one, so going through them in order leaves each one right, and the last one
-// gets what is left.
 func (h *maximizeHandler) restoreProportions(ctx *WindowContext, p *maximizePlan) error {
-	edge := map[string]string{"splith": "right", "splitv": "down"}[p.Layout]
-	if edge == "" || p.AxisSize <= 0 {
+	if p.Layout != "splith" && p.Layout != "splitv" {
 		return nil // tabbed or stacked: every child has all of it
 	}
 	tree, err := ctx.Tree()
@@ -519,7 +515,28 @@ func (h *maximizeHandler) restoreProportions(ctx *WindowContext, p *maximizePlan
 			return nil
 		}
 	}
+	cmds := resizeCommands(container, p.Percents, p.AxisSize)
+	if len(cmds) == 0 {
+		return nil
+	}
+	return ctx.Command(strings.Join(cmds, "; "))
+}
 
+// resizeCommands returns the commands that give the children of a split
+// container the shares of it in want, size being its length in pixels along
+// the split. Nothing for a tabbed or stacked container, where every child has
+// all of it.
+//
+// `resize set` would not do: it takes the difference from both neighbours, so
+// fixing one child unsettles the one fixed before it. Growing a child towards
+// its right (or bottom) edge only moves the border it shares with the next
+// one, so going through them in order leaves each one right, and the last one
+// gets what is left.
+func resizeCommands(container *Node, want []float64, size int) []string {
+	edge := map[string]string{"splith": "right", "splitv": "down"}[container.Layout]
+	if edge == "" || size <= 0 || len(want) != len(container.Nodes) {
+		return nil
+	}
 	current := make([]float64, len(container.Nodes))
 	for i := range container.Nodes {
 		if pct := container.Nodes[i].Percent; pct != nil {
@@ -528,8 +545,8 @@ func (h *maximizeHandler) restoreProportions(ctx *WindowContext, p *maximizePlan
 	}
 	var cmds []string
 	for i := 0; i < len(current)-1; i++ {
-		delta := p.Percents[i] - current[i]
-		px := int(math.Round(delta * float64(p.AxisSize)))
+		delta := want[i] - current[i]
+		px := int(math.Round(delta * float64(size)))
 		if px == 0 {
 			continue
 		}
@@ -540,10 +557,7 @@ func (h *maximizeHandler) restoreProportions(ctx *WindowContext, p *maximizePlan
 		cmds = append(cmds, fmt.Sprintf("[con_id=%s] resize %s %s %d px", container.Nodes[i].ID, verb, edge, px))
 		current[i+1] -= delta
 	}
-	if len(cmds) == 0 {
-		return nil
-	}
-	return ctx.Command(strings.Join(cmds, "; "))
+	return cmds
 }
 
 // unmark takes the mark off the window, when it still has it: once the window

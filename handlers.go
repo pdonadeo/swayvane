@@ -51,6 +51,7 @@ type WindowContext struct {
 	tree    *Node
 	treeErr error
 	treeOK  bool
+	sent    bool
 }
 
 // Tree returns the Sway layout tree, fetching it at most once per event and
@@ -76,6 +77,7 @@ func (c *WindowContext) Command(cmd string) error {
 	c.Log.Debug("SENDING COMMAND", "cmd", cmd)
 	outcomes, err := c.conn.Command(cmd)
 	c.tree, c.treeErr, c.treeOK = nil, nil, false
+	c.sent = true
 	if err != nil {
 		return err
 	}
@@ -92,6 +94,14 @@ func (c *WindowContext) Command(cmd string) error {
 	}
 	return nil
 }
+
+// Sent tells whether a handler earlier in the chain has already sent a command
+// for this event.
+func (c *WindowContext) Sent() bool { return c.sent }
+
+// Socket returns the path of the socket Sway is listening on, which names the
+// running instance: a new one gets a new path.
+func (c *WindowContext) Socket() string { return c.conn.sock.RemoteAddr().String() }
 
 // ── Dispatcher ────────────────────────────────────────────────────────────────
 

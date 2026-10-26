@@ -130,6 +130,7 @@ var longFlagNames = map[string]bool{
 	"autotiling":       true,
 	"maximize":         true,
 	"expose":           true,
+	"scatter":          true,
 	"split-ratio":      true,
 	"tab-min-width":    true,
 	"stack-min-height": true,
@@ -191,6 +192,7 @@ func main() {
 		autotiling     bool
 		maximize       bool
 		expose         bool
+		scatter        bool
 		toStderr       bool
 		splitRatio     int
 		tabMinWidth    int
@@ -223,6 +225,11 @@ func main() {
 		"Show every window of the focused workspace side by side, tabbed and "+
 			"stacked ones included, until the binding is pressed again "+
 			"(bind it with: bindsym <key> nop "+exposeCommand+")")
+	flag.BoolVar(&scatter, "scatter", false,
+		"Take every window of the focused workspace out of the layout and deal "+
+			"them out side by side as floating windows, until one is clicked or "+
+			"the binding is pressed again "+
+			"(bind it with: bindsym <key> nop "+scatterCommand+")")
 	flag.IntVar(&tabMinWidth, "tab-min-width", 500,
 		"Minimum width in pixels a new window may get out of a horizontal "+
 			"split: below it the container is made tabbed instead, so both "+
@@ -316,14 +323,26 @@ func main() {
 		}
 	}
 
-	// The exposé reshapes the layout for a while and the other layout
-	// handlers must leave it alone until it is over, so they are told about it
-	// before they are created.
-	var paused func() bool
+	// The exposés reshape the layout for a while and the other layout
+	// handlers must leave it alone until they are over, so they are told about
+	// it before they are created.
 	var exposeH *exposeHandler
+	var scatterH *scatterHandler
+	var exposeBindings []string
 	if expose {
 		exposeH = newExposeHandler()
-		paused = exposeH.active
+		exposeBindings = append(exposeBindings, exposeCommand)
+	}
+	if scatter {
+		scatterH = newScatterHandler()
+		exposeBindings = append(exposeBindings, scatterCommand)
+	}
+	paused := func() bool {
+		return (exposeH != nil && exposeH.active()) || (scatterH != nil && scatterH.active())
+	}
+	if exposeH != nil && scatterH != nil {
+		exposeH.paused = scatterH.active
+		scatterH.paused = exposeH.active
 	}
 
 	if autotiling {
@@ -337,14 +356,22 @@ func main() {
 	if maximize {
 		h := newMaximizeHandler()
 		h.paused = paused
-		h.expose = expose
+		h.endOn = exposeBindings
 		handlers = append(handlers, h)
 		log.Info("maximize enabled", "mark", maximizeMark, "stash", maximizeStash)
 	}
 
+	// Either exposé's key ends the other one, which stands aside meanwhile:
+	// the exposé is asked to by the time its key reaches the scattered one,
+	// and the scattered one does not start in the same go (see
+	// scatterHandler.HandleBinding).
 	if exposeH != nil {
 		handlers = append(handlers, exposeH)
 		log.Info("exposé enabled", "binding", "nop "+exposeCommand)
+	}
+	if scatterH != nil {
+		handlers = append(handlers, scatterH)
+		log.Info("scattered exposé enabled", "binding", "nop "+scatterCommand)
 	}
 
 	handlers = append(handlers, newIconHandler(conf))

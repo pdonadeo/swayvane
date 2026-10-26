@@ -29,6 +29,9 @@ type exposeHandler struct {
 	workspace NodeID
 	// restore lists what to put back, innermost container first.
 	restore []exposeRestore
+	// paused, when set and true, makes the handler ignore its binding: the
+	// scattered exposé is on, and the containers to split are gone.
+	paused func() bool
 }
 
 // exposeRestore records one container the exposé has split. Unlike maximize
@@ -53,7 +56,10 @@ func (h *exposeHandler) active() bool { return h.workspace != "" }
 func (h *exposeHandler) HandleWindow(*WindowContext) error { return nil }
 
 func (h *exposeHandler) HandleBinding(ctx *WindowContext, command string) error {
-	if !isNopBinding(command, exposeCommand) {
+	if isNopBinding(command, scatterCommand) && h.active() {
+		return h.restoreLayout(ctx) // the other exposé takes over
+	}
+	if !isNopBinding(command, exposeCommand) || (h.paused != nil && h.paused()) {
 		return nil
 	}
 	tree, err := ctx.Tree()
