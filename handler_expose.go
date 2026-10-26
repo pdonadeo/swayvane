@@ -56,7 +56,7 @@ func (h *exposeHandler) active() bool { return h.workspace != "" }
 func (h *exposeHandler) HandleWindow(*WindowContext) error { return nil }
 
 func (h *exposeHandler) HandleBinding(ctx *WindowContext, command string) error {
-	if isNopBinding(command, scatterCommand) && h.active() {
+	if scatterBinding(command) != nil && h.active() {
 		return h.restoreLayout(ctx) // the other exposé takes over
 	}
 	if !isNopBinding(command, exposeCommand) || (h.paused != nil && h.paused()) {

@@ -256,7 +256,14 @@ key again does the same, keeping the focus where it was:
 
 ```
 bindsym $mod+F4 nop ws-rename-scatter
+bindsym $mod+Shift+F4 nop ws-rename-scatter-uniform
 ```
+
+The two bindings differ in how the windows are sized. `ws-rename-scatter`
+gives every window a cell of the same size and fits each one to its cell, so
+they all come out about as big. `ws-rename-scatter-uniform` shrinks them all by
+the same factor, as macOS does, so a window twice as big as another stays
+twice as big, and lays them in rows.
 
 Unlike macOS, Sway cannot shrink what a window shows, so these are not
 thumbnails: each window really gets smaller, and redraws itself to fit — a

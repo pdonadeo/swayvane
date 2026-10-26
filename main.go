@@ -229,7 +229,8 @@ func main() {
 		"Take every window of the focused workspace out of the layout and deal "+
 			"them out side by side as floating windows, until one is clicked or "+
 			"the binding is pressed again "+
-			"(bind it with: bindsym <key> nop "+scatterCommand+")")
+			"(bind it with: bindsym <key> nop "+scatterCommand+", or nop "+
+			scatterUniformCommand+" to shrink them all alike)")
 	flag.IntVar(&tabMinWidth, "tab-min-width", 500,
 		"Minimum width in pixels a new window may get out of a horizontal "+
 			"split: below it the container is made tabbed instead, so both "+
@@ -335,7 +336,7 @@ func main() {
 	}
 	if scatter {
 		scatterH = newScatterHandler()
-		exposeBindings = append(exposeBindings, scatterCommand)
+		exposeBindings = append(exposeBindings, scatterCommand, scatterUniformCommand)
 	}
 	paused := func() bool {
 		return (exposeH != nil && exposeH.active()) || (scatterH != nil && scatterH.active())
@@ -371,7 +372,8 @@ func main() {
 	}
 	if scatterH != nil {
 		handlers = append(handlers, scatterH)
-		log.Info("scattered exposé enabled", "binding", "nop "+scatterCommand)
+		log.Info("scattered exposé enabled",
+			"binding", "nop "+scatterCommand, "uniform", "nop "+scatterUniformCommand)
 	}
 
 	handlers = append(handlers, newIconHandler(conf))

@@ -18,6 +18,27 @@ import (
 //	bindsym $mod+F4 nop ws-rename-scatter
 const scatterCommand = "ws-rename-scatter"
 
+// scatterUniformCommand does the same, with every window shrunk by the same
+// factor instead of each one fitted to a cell of its own (see scatterUniform).
+const scatterUniformCommand = "ws-rename-scatter-uniform"
+
+// scatterLayouts maps each scatter binding to the way it deals the windows out.
+var scatterLayouts = map[string]func(area Rect, sizes []Rect) []Rect{
+	scatterCommand:        scatterGrid,
+	scatterUniformCommand: scatterUniform,
+}
+
+// scatterBinding returns the layout of the scatter binding a command is, or
+// nil when it is none of them.
+func scatterBinding(command string) func(area Rect, sizes []Rect) []Rect {
+	for arg, layout := range scatterLayouts {
+		if isNopBinding(command, arg) {
+			return layout
+		}
+	}
+	return nil
+}
+
 // scatterAnchor is the mark `move container to mark` aims at while the windows
 // are put back, moved from window to window as they go in.
 const scatterAnchor = "_wsr_scatter"
@@ -168,7 +189,8 @@ func (h *scatterHandler) HandleBinding(ctx *WindowContext, command string) error
 	if isNopBinding(command, exposeCommand) && h.active() {
 		return h.restoreLayout(ctx) // the other exposé ends this one
 	}
-	if !isNopBinding(command, scatterCommand) || (h.paused != nil && h.paused()) {
+	layout := scatterBinding(command)
+	if layout == nil || (h.paused != nil && h.paused()) {
 		return nil
 	}
 	if ctx.Sent() {
@@ -205,11 +227,11 @@ func (h *scatterHandler) HandleBinding(ctx *WindowContext, command string) error
 	if ws == nil {
 		return nil
 	}
-	return h.scatter(ctx, ws)
+	return h.scatter(ctx, ws, layout)
 }
 
-// scatter records the workspace and deals its windows out.
-func (h *scatterHandler) scatter(ctx *WindowContext, ws *Node) error {
+// scatter records the workspace and deals its windows out with layout.
+func (h *scatterHandler) scatter(ctx *WindowContext, ws *Node, layout func(area Rect, sizes []Rect) []Rect) error {
 	fullscreen := false
 	traverseDeepFirst(func(n *Node, _ *Node, _ int) {
 		// The workspace reports itself as fullscreen: only its content counts.
@@ -260,7 +282,7 @@ func (h *scatterHandler) scatter(ctx *WindowContext, ws *Node) error {
 	for i, u := range units {
 		sizes[i] = u.Rect
 	}
-	places := scatterGrid(ws.Rect, sizes)
+	places := layout(ws.Rect, sizes)
 
 	cmds := []string{"focus_follows_mouse no"}
 	for _, n := range tiled {
@@ -355,6 +377,70 @@ func scatterGrid(area Rect, sizes []Rect) []Rect {
 			w, h = int(float64(size.Width)*s), int(float64(size.Height)*s)
 		}
 		places[i] = Rect{X: x + (cw-w)/2, Y: y + (ch-h)/2, Width: w, Height: h}
+	}
+	return places
+}
+
+// scatterUniform deals boxes of the given sizes out the way macOS does: all
+// shrunk by the same factor, so that they keep their sizes relative to each
+// other, and laid in rows in order, each row and the whole of them centred.
+// The factor is the largest one, never above 1, for which the rows fit area.
+func scatterUniform(area Rect, sizes []Rect) []Rect {
+	type row struct{ first, end, width, height int }
+	width, height := area.Width-2*scatterGap, area.Height-2*scatterGap
+	scaled := func(size Rect, s float64) (int, int) {
+		return max(int(float64(size.Width)*s), 1), max(int(float64(size.Height)*s), 1)
+	}
+	// rows fills rows left to right at factor s and tells whether they fit.
+	rows := func(s float64) ([]row, bool) {
+		var rs []row
+		for i, size := range sizes {
+			w, h := scaled(size, s)
+			if len(rs) == 0 || rs[len(rs)-1].width+scatterGap+w > width {
+				rs = append(rs, row{first: i, width: -scatterGap})
+			}
+			r := &rs[len(rs)-1]
+			r.end, r.width, r.height = i+1, r.width+scatterGap+w, max(r.height, h)
+		}
+		total := -scatterGap
+		for _, r := range rs {
+			total += scatterGap + r.height
+			if r.width > width {
+				return rs, false
+			}
+		}
+		return rs, total <= height
+	}
+
+	s := 1.0
+	if _, fit := rows(s); !fit {
+		lo, hi := 0.0, 1.0
+		for range 30 {
+			mid := (lo + hi) / 2
+			if _, fit := rows(mid); fit {
+				lo = mid
+			} else {
+				hi = mid
+			}
+		}
+		s = lo
+	}
+	rs, _ := rows(s)
+
+	total := -scatterGap
+	for _, r := range rs {
+		total += scatterGap + r.height
+	}
+	places := make([]Rect, len(sizes))
+	y := area.Y + scatterGap + (height-total)/2
+	for _, r := range rs {
+		x := area.X + scatterGap + (width-r.width)/2
+		for i := r.first; i < r.end; i++ {
+			w, h := scaled(sizes[i], s)
+			places[i] = Rect{X: x, Y: y + (r.height-h)/2, Width: w, Height: h}
+			x += w + scatterGap
+		}
+		y += r.height + scatterGap
 	}
 	return places
 }
