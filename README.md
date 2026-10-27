@@ -286,8 +286,9 @@ and go back where they were.
 Any focus change ends it: a click on a window, but also moving the focus with
 the keyboard or opening a new window. For the same reason the focus stops
 following the mouse while it lasts, or crossing a window on the way to another
-would pick it; afterwards `focus_follows_mouse` is set back to `yes`, Sway's
-default. Windows closed meanwhile are simply left out, windows opened meanwhile
+would pick it; afterwards the pointer goes to the middle of the window with
+the focus, so that it is not left over another one, and `focus_follows_mouse`
+is set back to `yes`, Sway's default. Windows closed meanwhile are simply left out, windows opened meanwhile
 go in wherever Sway puts a new window. Pressing the key on another workspace
 puts the first one back and scatters the second.
 

@@ -461,12 +461,12 @@ func (h *scatterHandler) restoreLayout(ctx *WindowContext) error {
 		return fmt.Errorf("get_tree: %w", err)
 	}
 	refocus := refocusCommand(tree)
-	cmds := []string{"focus_follows_mouse yes", "unmark " + scatterArmed}
+	cmds := []string{"unmark " + scatterArmed}
 
 	ws, _ := findNodeByID(tree, p.Workspace)
 	if ws == nil || ws.NodeType != "workspace" {
 		ctx.Log.Warn("the scattered workspace is gone", "workspace", p.WorkspaceName)
-		return ctx.Command(strings.Join(cmds, "; "))
+		return ctx.Command(strings.Join(append(cmds, "focus_follows_mouse yes"), "; "))
 	}
 
 	present := map[NodeID]bool{}
@@ -551,6 +551,23 @@ func (h *scatterHandler) restoreLayout(ctx *WindowContext) error {
 		if err = ctx.Command(strings.Join(cmds, "; ")); err != nil {
 			return err
 		}
+	}
+
+	// After a click the pointer is where the window clicked was while
+	// scattered, most likely over another window now, which would take the
+	// focus as soon as the mouse moved once it follows the mouse again. So
+	// the pointer goes to the middle of the window with the focus first.
+	if tree, err = ctx.Tree(); err != nil {
+		return fmt.Errorf("get_tree: %w", err)
+	}
+	cmds = nil
+	if w, _ := findFocusedLeaf(tree); w != nil && w.NodeType != "workspace" {
+		r := w.Rect
+		cmds = append(cmds, fmt.Sprintf("seat - cursor set %d %d", r.X+r.Width/2, r.Y+r.Height/2))
+	}
+	cmds = append(cmds, "focus_follows_mouse yes")
+	if err = ctx.Command(strings.Join(cmds, "; ")); err != nil {
+		return err
 	}
 	ctx.Log.Info("scatter over", "workspace", p.WorkspaceName, "windows", len(leaves)+len(floating))
 	return nil
