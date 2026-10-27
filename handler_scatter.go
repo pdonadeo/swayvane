@@ -47,6 +47,15 @@ const scatterAnchor = "_wsr_scatter"
 // scatterHandler.armed.
 const scatterArmed = "_wsr_scatter_armed"
 
+// scatterClick is the binding that takes over the left button while the
+// windows are scattered. Picking a window must not click into it as well: the
+// focus changes as soon as the button goes down, so the windows would be put
+// back with the button still down, and whatever moves under it then — the
+// window itself, the pointer, autotiling — would reach the window as a drag.
+// A mouse binding keeps the click from the window, and `focus` runs on the
+// window under the pointer. Sway forgets it on reload, which is as well.
+const scatterClick = "--whole-window button1"
+
 // scatterGap is the room left between the scattered windows and around them,
 // in pixels.
 const scatterGap = 30
@@ -284,7 +293,7 @@ func (h *scatterHandler) scatter(ctx *WindowContext, ws *Node, layout func(area 
 	}
 	places := layout(ws.Rect, sizes)
 
-	cmds := []string{"focus_follows_mouse no"}
+	cmds := []string{"focus_follows_mouse no", "bindsym " + scatterClick + " focus"}
 	for _, n := range tiled {
 		cmds = append(cmds, fmt.Sprintf("[con_id=%s] floating enable", n.ID))
 	}
@@ -461,7 +470,7 @@ func (h *scatterHandler) restoreLayout(ctx *WindowContext) error {
 		return fmt.Errorf("get_tree: %w", err)
 	}
 	refocus := refocusCommand(tree)
-	cmds := []string{"unmark " + scatterArmed}
+	cmds := []string{"unbindsym " + scatterClick, "unmark " + scatterArmed}
 
 	ws, _ := findNodeByID(tree, p.Workspace)
 	if ws == nil || ws.NodeType != "workspace" {
@@ -557,21 +566,13 @@ func (h *scatterHandler) restoreLayout(ctx *WindowContext) error {
 	// scattered, most likely over another window now, which would take the
 	// focus as soon as the mouse moved once it follows the mouse again. So
 	// the pointer goes to the middle of the window with the focus first.
-	//
-	// The button of that click is most likely still down, though, since the
-	// focus changes as soon as it is pressed, and moving the pointer with a
-	// button down is a drag: the window would select text up to where the
-	// pointer lands, and never hear of the button coming up. So the button
-	// is let go first. Without a click to end, that only sends the window a
-	// release for a button it never saw pressed, which it ignores.
 	if tree, err = ctx.Tree(); err != nil {
 		return fmt.Errorf("get_tree: %w", err)
 	}
 	cmds = nil
 	if w, _ := findFocusedLeaf(tree); w != nil && w.NodeType != "workspace" {
 		r := w.Rect
-		cmds = append(cmds, "seat - cursor release button1",
-			fmt.Sprintf("seat - cursor set %d %d", r.X+r.Width/2, r.Y+r.Height/2))
+		cmds = append(cmds, fmt.Sprintf("seat - cursor set %d %d", r.X+r.Width/2, r.Y+r.Height/2))
 	}
 	cmds = append(cmds, "focus_follows_mouse yes")
 	if err = ctx.Command(strings.Join(cmds, "; ")); err != nil {

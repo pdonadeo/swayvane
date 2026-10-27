@@ -284,7 +284,10 @@ again on the way back. Windows that were floating already are dealt out too,
 and go back where they were.
 
 Any focus change ends it: a click on a window, but also moving the focus with
-the keyboard or opening a new window. For the same reason the focus stops
+the keyboard or opening a new window. The click only picks the window: it
+does not reach it, as on macOS. For that the left button is bound to `focus`
+while the windows are scattered (`bindsym --whole-window button1`), which
+replaces a binding of your own on it, if you have one, until Sway reloads. For the same reason the focus stops
 following the mouse while it lasts, or crossing a window on the way to another
 would pick it; afterwards the pointer goes to the middle of the window with
 the focus, so that it is not left over another one, and `focus_follows_mouse`
