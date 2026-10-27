@@ -557,13 +557,21 @@ func (h *scatterHandler) restoreLayout(ctx *WindowContext) error {
 	// scattered, most likely over another window now, which would take the
 	// focus as soon as the mouse moved once it follows the mouse again. So
 	// the pointer goes to the middle of the window with the focus first.
+	//
+	// The button of that click is most likely still down, though, since the
+	// focus changes as soon as it is pressed, and moving the pointer with a
+	// button down is a drag: the window would select text up to where the
+	// pointer lands, and never hear of the button coming up. So the button
+	// is let go first. Without a click to end, that only sends the window a
+	// release for a button it never saw pressed, which it ignores.
 	if tree, err = ctx.Tree(); err != nil {
 		return fmt.Errorf("get_tree: %w", err)
 	}
 	cmds = nil
 	if w, _ := findFocusedLeaf(tree); w != nil && w.NodeType != "workspace" {
 		r := w.Rect
-		cmds = append(cmds, fmt.Sprintf("seat - cursor set %d %d", r.X+r.Width/2, r.Y+r.Height/2))
+		cmds = append(cmds, "seat - cursor release button1",
+			fmt.Sprintf("seat - cursor set %d %d", r.X+r.Width/2, r.Y+r.Height/2))
 	}
 	cmds = append(cmds, "focus_follows_mouse yes")
 	if err = ctx.Command(strings.Join(cmds, "; ")); err != nil {
