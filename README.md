@@ -250,20 +250,32 @@ split.
 
 `--scatter` is the exposé taken one step further, closer to the one on macOS:
 every window of the focused workspace leaves the layout, becomes floating and
-is dealt out on a grid, roughly in the order they were on screen. Click a
+is dealt out over the screen, roughly in the order they were on screen. Click a
 window and everything goes back in place, with the focus on it; pressing the
-key again does the same, keeping the focus where it was:
+key again does the same, keeping the focus where it was.
+
+There are two ways to deal the windows out, each on a binding of its own, so
+both can be on at once:
 
 ```
-bindsym $mod+F4 nop ws-rename-scatter
+bindsym $mod+F4       nop ws-rename-scatter
 bindsym $mod+Shift+F4 nop ws-rename-scatter-uniform
 ```
 
-The two bindings differ in how the windows are sized. `ws-rename-scatter`
-gives every window a cell of the same size and fits each one to its cell, so
-they all come out about as big. `ws-rename-scatter-uniform` shrinks them all by
-the same factor, as macOS does, so a window twice as big as another stays
-twice as big, and lays them in rows.
+- **`ws-rename-scatter`, on a grid.** The screen is split into cells of the
+  same size, as many columns as give the cells the most room, and each window
+  is shrunk to fit its own cell. The windows come out about as big as each
+  other, whatever their size was: a small one is easy to spot, but a big one
+  is shrunk more than the others, and a tall window in a wide cell leaves room
+  on its sides.
+- **`ws-rename-scatter-uniform`, all shrunk alike.** Every window is shrunk by
+  the same factor, as macOS does, so a window twice as big as another stays
+  twice as big; they are laid in rows, each row centred. The factor is the
+  largest that fits them all on the screen. The screen fills better with
+  windows of mixed shapes, and their sizes still tell which is which, but next
+  to a big window a small one stays small.
+
+Neither enlarges a window. Either key ends a scatter started with the other.
 
 Unlike macOS, Sway cannot shrink what a window shows, so these are not
 thumbnails: each window really gets smaller, and redraws itself to fit — a
@@ -304,7 +316,7 @@ Available command-line options:
 | `--autotiling`    | Keep the split direction of the focused window matched to its shape. |
 | `--maximize`      | Give the window marked `_wsr_max` the whole workspace until the mark is removed, keeping the bar and the gaps; the other windows wait on workspace `11:⏸`. |
 | `--expose`        | Lay out every window of the focused workspace side by side, tabbed and stacked ones included, until the key bound to `nop ws-rename-expose` is pressed again. |
-| `--scatter`       | Take every window of the focused workspace out of the layout and deal them out as floating windows, until one is clicked or the key bound to `nop ws-rename-scatter` is pressed again. |
+| `--scatter`       | Take every window of the focused workspace out of the layout and deal them out as floating windows, until one is clicked or the key bound to `nop ws-rename-scatter` (on a grid) or `nop ws-rename-scatter-uniform` (all shrunk alike) is pressed again. |
 | `--split-ratio`   | Percentage of the container given to a newly opened window (default: 30; 50 splits evenly). Requires `--autotiling`. |
 | `--tab-min-width` | Smallest width, in pixels, a new window may get out of a horizontal split; below it the container is made tabbed instead (default: 500; 0 disables). Requires `--autotiling`. |
 | `--stack-min-height` | The same for a vertical split, where the container is stacked instead (default: 300; 0 disables). Requires `--autotiling`. |
