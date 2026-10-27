@@ -52,9 +52,14 @@ const scatterArmed = "_wsr_scatter_armed"
 // focus changes as soon as the button goes down, so the windows would be put
 // back with the button still down, and whatever moves under it then — the
 // window itself, the pointer, autotiling — would reach the window as a drag.
-// A mouse binding keeps the click from the window, and `focus` runs on the
-// window under the pointer. Sway forgets it on reload, which is as well.
+// A mouse binding keeps the click from the window, and runs scatterClickCommand
+// on the window under the pointer. Sway forgets it on reload, which is as well.
 const scatterClick = "--whole-window button1"
+
+// scatterClickCommand is what the click runs: `focus` picks the window, and
+// the binding event the `nop` brings tells the scatter to end even when the
+// window clicked had the focus already, and so no focus event comes.
+const scatterClickCommand = "focus; nop ws-rename-scatter-pick"
 
 // scatterGap is the room left between the scattered windows and around them,
 // in pixels.
@@ -195,6 +200,12 @@ func (h *scatterHandler) HandleWindow(ctx *WindowContext) error {
 }
 
 func (h *scatterHandler) HandleBinding(ctx *WindowContext, command string) error {
+	if command == scatterClickCommand {
+		if !h.active() {
+			return nil // already ended by the focus event of the same click
+		}
+		return h.restoreLayout(ctx)
+	}
 	if isNopBinding(command, exposeCommand) && h.active() {
 		return h.restoreLayout(ctx) // the other exposé ends this one
 	}
@@ -293,7 +304,7 @@ func (h *scatterHandler) scatter(ctx *WindowContext, ws *Node, layout func(area 
 	}
 	places := layout(ws.Rect, sizes)
 
-	cmds := []string{"focus_follows_mouse no", "bindsym " + scatterClick + " focus"}
+	cmds := []string{"focus_follows_mouse no", "bindsym " + scatterClick + ` "` + scatterClickCommand + `"`}
 	for _, n := range tiled {
 		cmds = append(cmds, fmt.Sprintf("[con_id=%s] floating enable", n.ID))
 	}
