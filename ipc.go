@@ -22,6 +22,7 @@ const (
 	msgCommand   = uint32(0)
 	msgSubscribe = uint32(2)
 	msgTree      = uint32(4)
+	msgConfig    = uint32(9)
 )
 
 // NodeID is stored as a string but arrives as an integer in Sway's JSON.
@@ -328,6 +329,22 @@ func (c *Conn) GetTree() (Node, error) {
 		return Node{}, err
 	}
 	return node, nil
+}
+
+// GetConfig returns the text of the main configuration file as Sway last
+// loaded it: the files it includes are not in it.
+func (c *Conn) GetConfig() (string, error) {
+	data, err := c.sendCmd(msgConfig, "")
+	if err != nil {
+		return "", err
+	}
+	var reply struct {
+		Config string `json:"config"`
+	}
+	if err := json.Unmarshal(data, &reply); err != nil {
+		return "", err
+	}
+	return reply.Config, nil
 }
 
 func (c *Conn) Command(cmd string) ([]CommandOutcome, error) {

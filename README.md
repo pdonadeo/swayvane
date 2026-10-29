@@ -296,6 +296,17 @@ is set back to `yes`, Sway's default. Windows closed meanwhile are simply left o
 go in wherever Sway puts a new window. Pressing the key on another workspace
 puts the first one back and scatters the second.
 
+While scattered, every window gets a title bar, and the first nine a number in
+it, in reading order: the keys `1` to `9` pick a window just as a click does,
+without the mouse. They are bound for as long as it lasts, which replaces any
+binding of your own on those keys until Sway reloads. The window with the
+focus gets a thicker border in the color of its title bar, so that it is easy
+to see which one stays when the scatter is ended with its key. Both colors
+come from `client.focused` in the main configuration file (one it includes is
+not read), and the number is drawn as a badge when the font is a `pango:` one;
+otherwise it is a plain `[1]`. Afterwards each window gets its border back,
+and its title format is set to `%title`, Sway's default.
+
 It can be on together with `--expose`, on another key: each key ends the
 other mode. When the exposé is on, or a window is maximized, the key only ends
 that, and a second press scatters. What to restore is kept in

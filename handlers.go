@@ -95,6 +95,10 @@ func (c *WindowContext) Command(cmd string) error {
 	return nil
 }
 
+// Config returns the text of Sway's main configuration file (see
+// Conn.GetConfig).
+func (c *WindowContext) Config() (string, error) { return c.conn.GetConfig() }
+
 // Sent tells whether a handler earlier in the chain has already sent a command
 // for this event.
 func (c *WindowContext) Sent() bool { return c.sent }

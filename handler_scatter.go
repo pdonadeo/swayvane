@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -56,10 +57,22 @@ const scatterArmed = "_wsr_scatter_armed"
 // on the window under the pointer. Sway forgets it on reload, which is as well.
 const scatterClick = "--whole-window button1"
 
-// scatterClickCommand is what the click runs: `focus` picks the window, and
-// the binding event the `nop` brings tells the scatter to end even when the
-// window clicked had the focus already, and so no focus event comes.
-const scatterClickCommand = "focus; nop ws-rename-scatter-pick"
+// scatterPick ends every binding that picks a window while the windows are
+// scattered: the binding event its `nop` brings tells the scatter to end even
+// when the window picked had the focus already, and so no focus event comes.
+const scatterPick = "ws-rename-scatter-pick"
+
+// scatterClickCommand is what the click runs: `focus` picks the window under
+// the pointer.
+const scatterClickCommand = "focus; nop " + scatterPick
+
+// scatterKeys is how many windows get a number in their title bar, and the
+// key of that number to pick them with: 1 to 9.
+const scatterKeys = 9
+
+// scatterFocusBorder is the least width of the border of the window with the
+// focus while the windows are scattered, so that it stands out.
+const scatterFocusBorder = 4
 
 // scatterGap is the room left between the scattered windows and around them,
 // in pixels.
@@ -83,7 +96,8 @@ const scatterGap = 30
 //
 // Any focus change ends it, which is what makes a click a pick; for the same
 // reason the focus no longer follows the mouse while it lasts, or crossing a
-// window on the way to another would pick it.
+// window on the way to another would pick it. The keys 1 to 9 pick a window
+// too: each window shows its number in a title bar of its own while scattered.
 type scatterHandler struct {
 	// plan describes the workspace as it was, or is nil when nothing is
 	// scattered.
@@ -116,6 +130,12 @@ type scatterPlan struct {
 	Tree *scatterNode `json:"tree,omitempty"`
 	// Floating lists the windows that were floating already, and where.
 	Floating []scatterFloat `json:"floating,omitempty"`
+	// Decor lists every window dealt out, in the order of their numbers, with
+	// the border it had.
+	Decor []scatterDecor `json:"decor,omitempty"`
+	// FocusedColors holds the colors of client.focused, when the scatter
+	// changed them.
+	FocusedColors string `json:"focused_colors,omitempty"`
 }
 
 // scatterNode is a window, when it has no children, or a container.
@@ -136,6 +156,12 @@ type scatterNode struct {
 type scatterFloat struct {
 	ID   NodeID `json:"id"`
 	Rect Rect   `json:"rect"`
+}
+
+type scatterDecor struct {
+	ID     NodeID `json:"id"`
+	Border string `json:"border"`
+	Width  int    `json:"width"`
 }
 
 func newScatterHandler() *scatterHandler {
@@ -200,7 +226,7 @@ func (h *scatterHandler) HandleWindow(ctx *WindowContext) error {
 }
 
 func (h *scatterHandler) HandleBinding(ctx *WindowContext, command string) error {
-	if command == scatterClickCommand {
+	if isScatterPick(command) {
 		if !h.active() {
 			return nil // already ended by the focus event of the same click
 		}
@@ -304,9 +330,34 @@ func (h *scatterHandler) scatter(ctx *WindowContext, ws *Node, layout func(area 
 	}
 	places := layout(ws.Rect, sizes)
 
+	config, err := ctx.Config()
+	if err != nil {
+		ctx.Log.Warn("could not read the configuration, the windows keep their colors", "error", err)
+	}
+	theme := readScatterTheme(config)
+
 	cmds := []string{"focus_follows_mouse no", "bindsym " + scatterClick + ` "` + scatterClickCommand + `"`}
+	if highlight := theme.highlight(); highlight != "" {
+		plan.FocusedColors = strings.Join(theme.focused, " ")
+		cmds = append(cmds, "client.focused "+highlight)
+	}
 	for _, n := range tiled {
 		cmds = append(cmds, fmt.Sprintf("[con_id=%s] floating enable", n.ID))
+	}
+	// The title bar goes on before the windows are sized, as it is part of
+	// the size given.
+	for i, u := range units {
+		plan.Decor = append(plan.Decor, scatterDecor{ID: u.ID, Border: u.Border, Width: u.CurrBorderW})
+		width := u.CurrBorderW
+		if u.Focused {
+			width = max(width, scatterFocusBorder)
+		}
+		cmds = append(cmds, fmt.Sprintf("[con_id=%s] border normal %d", u.ID, width))
+		if i < scatterKeys {
+			cmds = append(cmds,
+				fmt.Sprintf("[con_id=%s] title_format %s", u.ID, swayQuote(theme.label(i+1, u.Focused))),
+				fmt.Sprintf(`bindsym %d "[con_id=%s] focus; nop %s"`, i+1, u.ID, scatterPick))
+		}
 	}
 	for i, u := range units {
 		p := places[i]
@@ -323,6 +374,115 @@ func (h *scatterHandler) scatter(ctx *WindowContext, ws *Node, layout func(area 
 	}
 	ctx.Log.Info("scattered", "workspace", plan.WorkspaceName, "windows", len(units))
 	return nil
+}
+
+// isScatterPick tells whether a binding command is one of those picking a
+// window, the click or a number.
+func isScatterPick(command string) bool {
+	return strings.HasSuffix(command, "nop "+scatterPick)
+}
+
+// scatterTheme is what the scatter borrows from the configuration to mark the
+// windows.
+type scatterTheme struct {
+	// focused holds the colors of client.focused as written there, variables
+	// resolved, or is nil when they are not found.
+	focused []string
+	// markup tells whether titles take Pango markup, which a `pango:` font
+	// turns on.
+	markup bool
+}
+
+// readScatterTheme picks the colors of client.focused and the font out of the
+// text of the configuration. Only the main file is there, not the ones it
+// includes: what is set in those is not found, and the windows then keep the
+// colors they have and get a plain number.
+func readScatterTheme(config string) scatterTheme {
+	var t scatterTheme
+	vars := map[string]string{}
+	for line := range strings.Lines(config) {
+		f := strings.Fields(line)
+		if len(f) == 0 {
+			continue
+		}
+		switch f[0] {
+		case "set":
+			if len(f) >= 3 && strings.HasPrefix(f[1], "$") {
+				vars[f[1]] = f[2]
+			}
+		case "font":
+			t.markup = len(f) >= 2 && strings.HasPrefix(f[1], "pango:")
+		case "client.focused":
+			if len(f) < 4 {
+				continue
+			}
+			t.focused = nil
+			for _, c := range f[1:] {
+				if v, ok := vars[c]; ok {
+					c = v
+				}
+				t.focused = append(t.focused, c)
+			}
+		}
+	}
+	return t
+}
+
+// highlight returns the colors of client.focused with the border around the
+// window in the color of the title bar's own, or an empty string when they
+// are the same already or unknown.
+func (t scatterTheme) highlight() string {
+	if len(t.focused) < 3 {
+		return ""
+	}
+	c := append([]string(nil), t.focused...)
+	for len(c) < 5 {
+		c = append(c, c[0]) // the indicator and the border around the window
+	}
+	if c[4] == c[0] {
+		return ""
+	}
+	c[4] = c[0]
+	return strings.Join(c[:5], " ")
+}
+
+// label is the title format giving a window its number: in the colors of the
+// title bar with the focus, the other way round on that title bar itself.
+func (t scatterTheme) label(n int, focused bool) string {
+	if !t.markup || len(t.focused) < 3 {
+		return fmt.Sprintf("[%d] %%title", n)
+	}
+	bg, fg := t.focused[1], t.focused[2]
+	if focused {
+		bg, fg = fg, bg
+	}
+	return fmt.Sprintf("<span background='%s' foreground='%s'> %d </span> %%title", bg, fg, n)
+}
+
+// undecorate takes the keys back, and gives client.focused its colors and the
+// windows still around their borders and titles.
+func (p *scatterPlan) undecorate(tree *Node) []string {
+	var cmds []string
+	for i := range min(len(p.Decor), scatterKeys) {
+		cmds = append(cmds, fmt.Sprintf("unbindsym %d", i+1))
+	}
+	if p.FocusedColors != "" {
+		cmds = append(cmds, "client.focused "+p.FocusedColors)
+	}
+	for i, d := range p.Decor {
+		if n, _ := findNodeByID(tree, d.ID); n == nil {
+			continue
+		}
+		border := d.Border
+		if border == "normal" || border == "pixel" {
+			border += " " + strconv.Itoa(d.Width)
+		}
+		cmds = append(cmds, fmt.Sprintf("[con_id=%s] border %s", d.ID, border))
+		if i < scatterKeys {
+			cmds = append(cmds, fmt.Sprintf("[con_id=%s] title_format %%title", d.ID))
+		}
+	}
+	return cmds
 }
 
 // snapshotNode records a node and everything under it.
@@ -481,7 +641,9 @@ func (h *scatterHandler) restoreLayout(ctx *WindowContext) error {
 		return fmt.Errorf("get_tree: %w", err)
 	}
 	refocus := refocusCommand(tree)
-	cmds := []string{"unbindsym " + scatterClick, "unmark " + scatterArmed}
+	// The borders go back before the windows are sized: the sizes recorded
+	// for the floating ones take them in.
+	cmds := append([]string{"unbindsym " + scatterClick, "unmark " + scatterArmed}, p.undecorate(tree)...)
 
 	ws, _ := findNodeByID(tree, p.Workspace)
 	if ws == nil || ws.NodeType != "workspace" {
