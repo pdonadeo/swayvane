@@ -16,12 +16,12 @@ import (
 // scatterCommand is the argument of the `nop` binding that toggles the
 // scattered exposé:
 //
-//	bindsym $mod+F4 nop ws-rename-scatter
-const scatterCommand = "ws-rename-scatter"
+//	bindsym $mod+F4 nop swayvane-scatter
+const scatterCommand = "swayvane-scatter"
 
 // scatterUniformCommand does the same, with every window shrunk by the same
 // factor instead of each one fitted to a cell of its own (see scatterUniform).
-const scatterUniformCommand = "ws-rename-scatter-uniform"
+const scatterUniformCommand = "swayvane-scatter-uniform"
 
 // scatterLayouts maps each scatter binding to the way it deals the windows out.
 var scatterLayouts = map[string]func(area Rect, sizes []Rect) []Rect{
@@ -42,11 +42,11 @@ func scatterBinding(command string) func(area Rect, sizes []Rect) []Rect {
 
 // scatterAnchor is the mark `move container to mark` aims at while the windows
 // are put back, moved from window to window as they go in.
-const scatterAnchor = "_wsr_scatter"
+const scatterAnchor = "_swayvane_scatter"
 
 // scatterArmed is the mark set at the end of the scatter commands: see
 // scatterHandler.armed.
-const scatterArmed = "_wsr_scatter_armed"
+const scatterArmed = "_swayvane_scatter_armed"
 
 // scatterClick is the binding that takes over the left button while the
 // windows are scattered. Picking a window must not click into it as well: the
@@ -60,7 +60,7 @@ const scatterClick = "--whole-window button1"
 // scatterPick ends every binding that picks a window while the windows are
 // scattered: the binding event its `nop` brings tells the scatter to end even
 // when the window picked had the focus already, and so no focus event comes.
-const scatterPick = "ws-rename-scatter-pick"
+const scatterPick = "swayvane-scatter-pick"
 
 // scatterClickCommand is what the click runs: `focus` picks the window under
 // the pointer.
@@ -167,7 +167,7 @@ type scatterDecor struct {
 func newScatterHandler() *scatterHandler {
 	h := &scatterHandler{}
 	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
-		h.stateFile = filepath.Join(dir, "ws-rename", "scatter.json")
+		h.stateFile = filepath.Join(dir, "swayvane", "scatter.json")
 	}
 	return h
 }

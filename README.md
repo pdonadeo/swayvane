@@ -1,20 +1,41 @@
-# ws-rename
+<p align="center">
+  <img src="assets/logo.svg" alt="swayvane" width="560">
+</p>
 
-`ws-rename` is a small background helper for the [Sway](https://swaywm.org/)
-window manager. It watches your workspaces and automatically renames each one
-to show an icon for every application you have open in it, so instead of a
-bare workspace number your bar shows something like:
+<p align="center">
+  <a href="https://github.com/pdonadeo/swayvane/actions/workflows/release.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/pdonadeo/swayvane/release.yml?style=flat-square&logo=githubactions&logoColor=white&label=build"></a>
+  <a href="https://github.com/pdonadeo/swayvane/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/pdonadeo/swayvane?style=flat-square&color=de935f"></a>
+  <img alt="Go version" src="https://img.shields.io/github/go-mod/go-version/pdonadeo/swayvane?style=flat-square&logo=go&logoColor=white">
+  <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-zero-b5bd68?style=flat-square">
+  <a href="https://swaywm.org/"><img alt="For Sway" src="https://img.shields.io/badge/for-Sway-81a2be?style=flat-square&logo=wayland&logoColor=white"></a>
+  <img alt="Linux amd64 | arm64" src="https://img.shields.io/badge/linux-amd64%20%7C%20arm64-8e908c?style=flat-square&logo=linux&logoColor=white">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/pdonadeo/swayvane?style=flat-square"></a>
+</p>
 
-```
-1:🦊|📝   2:🎵   3:💻|💬
-```
+`swayvane` is a background companion for the [Sway](https://swaywm.org/)
+window manager. Like a weather vane in the wind, it follows what happens on
+your workspaces and keeps them tidy:
 
-No more guessing which workspace has your browser, your editor, or your chat
-app — you can see it at a glance in the bar.
+- **Workspace icons**: each workspace is renamed to show an icon for every
+  application open in it, so instead of a bare number your bar shows something
+  like `1:🦊|📝   2:🎵   3:💻|💬`.
+- **[Firefox title rules](#firefox-title-rules)**: `for_window` rules on the
+  title of Firefox windows, applied when the title actually shows up.
+- **[Autotiling](#autotiling)**: a new window splits the focused one along its
+  longer side, takes only part of its space, and becomes a tab where it would
+  be too thin.
+- **[Maximize](#maximize-without-fullscreen)**: one window takes the whole
+  workspace, bar and gaps kept, and the layout comes back intact.
+- **[Exposé](#exposé)** and **[scattered exposé](#scattered-exposé)**: see
+  every window of the workspace at once, and pick one with a click or a number
+  key.
+
+It was called `ws-rename` until version 26, when renaming workspaces was all
+it did.
 
 ## How it works
 
-Every time you open, close, move, or rename a window, `ws-rename` looks at
+Every time you open, close, move, or rename a window, `swayvane` looks at
 which applications are present on each workspace and renames the workspace to
 a string made of the workspace number followed by one icon (or short label)
 per open application, separated by `|`. If it doesn't recognize an
@@ -37,23 +58,23 @@ interaction once it's set up.
 ## Installing
 
 The simplest way is to grab a prebuilt binary from the
-[Releases](../../releases) page — `ws-rename-linux-amd64` or
-`ws-rename-linux-arm64`, depending on your machine — and copy it somewhere on
-your `PATH`, for example `~/.local/bin/ws-rename` (remember to `chmod +x` it).
+[Releases](../../releases) page — `swayvane-linux-amd64` or
+`swayvane-linux-arm64`, depending on your machine — and copy it somewhere on
+your `PATH`, for example `~/.local/bin/swayvane` (remember to `chmod +x` it).
 
-`ws-rename` is written in Go and has no external dependencies, so if you'd
+`swayvane` is written in Go and has no external dependencies, so if you'd
 rather build it yourself all you need is a Go toolchain (Go 1.26 or newer):
 
 ```sh
-go build -o ws-rename .
+go build -o swayvane .
 ```
 
-Copy the resulting `ws-rename` binary somewhere on your `PATH`, for example
+Copy the resulting `swayvane` binary somewhere on your `PATH`, for example
 `~/.local/bin/`.
 
 ## Setting up your icons
 
-You tell `ws-rename` which icon or label to show for each application through
+You tell `swayvane` which icon or label to show for each application through
 a configuration file named `app-icons.json`. By default the program looks for
 it in:
 
@@ -94,7 +115,7 @@ lowercase, since X11 windows essentially always have one; native Wayland
 windows are only guaranteed an app_id, so there's nothing meaningful to fall
 back to and you get a generic icon (▨) instead.
 
-You don't need to restart `ws-rename` after editing this file — just restart
+You don't need to restart `swayvane` after editing this file — just restart
 the program (see below) to pick up your changes.
 
 ## Extra behaviours
@@ -192,7 +213,7 @@ The trigger is a Sway mark rather than a command of its own, so a plain binding
 is all it takes:
 
 ```
-bindsym $mod+z mark --add --toggle _wsr_max
+bindsym $mod+z mark --add --toggle _swayvane_max
 ```
 
 Sway reports the mark as a window event, which is how the program hears about
@@ -211,7 +232,7 @@ If the maximized window goes away in the meantime — closed, moved to another
 workspace, made floating — the others come back on their own, as if it had
 gone from the original layout. Windows opened while it is maximized end up next
 to it once the others are back. What to restore is also written to
-`$XDG_RUNTIME_DIR/ws-rename/maximize.json`, so if the program is restarted
+`$XDG_RUNTIME_DIR/swayvane/maximize.json`, so if the program is restarted
 while a window is maximized, it puts everything back as soon as it starts. And
 with `--expose` on, calling up the exposé ends the maximize first, since most of
 what it would show is parked.
@@ -224,7 +245,7 @@ the focused workspace side by side, and pressing it again puts everything back
 the way it was:
 
 ```
-bindsym XF86Tools nop ws-rename-expose
+bindsym XF86Tools nop swayvane-expose
 ```
 
 Any key will do; `nop` is a Sway command that does nothing, but Sway still
@@ -258,17 +279,17 @@ There are two ways to deal the windows out, each on a binding of its own, so
 both can be on at once:
 
 ```
-bindsym $mod+F4       nop ws-rename-scatter
-bindsym $mod+Shift+F4 nop ws-rename-scatter-uniform
+bindsym $mod+F4       nop swayvane-scatter
+bindsym $mod+Shift+F4 nop swayvane-scatter-uniform
 ```
 
-- **`ws-rename-scatter`, on a grid.** The screen is split into cells of the
+- **`swayvane-scatter`, on a grid.** The screen is split into cells of the
   same size, as many columns as give the cells the most room, and each window
   is shrunk to fit its own cell. The windows come out about as big as each
   other, whatever their size was: a small one is easy to spot, but a big one
   is shrunk more than the others, and a tall window in a wide cell leaves room
   on its sides.
-- **`ws-rename-scatter-uniform`, all shrunk alike.** Every window is shrunk by
+- **`swayvane-scatter-uniform`, all shrunk alike.** Every window is shrunk by
   the same factor, as macOS does, so a window twice as big as another stays
   twice as big; they are laid in rows, each row centred. The factor is the
   largest that fits them all on the screen. The screen fills better with
@@ -310,7 +331,7 @@ and its title format is set to `%title`, Sway's default.
 It can be on together with `--expose`, on another key: each key ends the
 other mode. When the exposé is on, or a window is maximized, the key only ends
 that, and a second press scatters. What to restore is kept in
-`$XDG_RUNTIME_DIR/ws-rename/scatter.json`, so restarting the program in the
+`$XDG_RUNTIME_DIR/swayvane/scatter.json`, so restarting the program in the
 middle puts the workspace back as soon as it starts.
 
 ## Running it
@@ -319,7 +340,7 @@ Add a line like this to your Sway configuration file so the program starts
 automatically with your session:
 
 ```
-exec ws-rename --daemon
+exec swayvane --daemon
 ```
 
 Available command-line options:
@@ -330,9 +351,9 @@ Available command-line options:
 | `-v`, `--verbose` | Log extra diagnostic detail, useful when troubleshooting.            |
 | `-c`, `--conf`    | Path to a specific `app-icons.json` file, if you don't want to rely on the default locations. |
 | `--autotiling`    | Keep the split direction of the focused window matched to its shape. |
-| `--maximize`      | Give the window marked `_wsr_max` the whole workspace until the mark is removed, keeping the bar and the gaps; the other windows wait on workspace `11:⏸`. |
-| `--expose`        | Lay out every window of the focused workspace side by side, tabbed and stacked ones included, until the key bound to `nop ws-rename-expose` is pressed again. |
-| `--scatter`       | Take every window of the focused workspace out of the layout and deal them out as floating windows, until one is clicked or the key bound to `nop ws-rename-scatter` (on a grid) or `nop ws-rename-scatter-uniform` (all shrunk alike) is pressed again. |
+| `--maximize`      | Give the window marked `_swayvane_max` the whole workspace until the mark is removed, keeping the bar and the gaps; the other windows wait on workspace `11:⏸`. |
+| `--expose`        | Lay out every window of the focused workspace side by side, tabbed and stacked ones included, until the key bound to `nop swayvane-expose` is pressed again. |
+| `--scatter`       | Take every window of the focused workspace out of the layout and deal them out as floating windows, until one is clicked or the key bound to `nop swayvane-scatter` (on a grid) or `nop swayvane-scatter-uniform` (all shrunk alike) is pressed again. |
 | `--split-ratio`   | Percentage of the container given to a newly opened window (default: 30; 50 splits evenly). Requires `--autotiling`. |
 | `--tab-min-width` | Smallest width, in pixels, a new window may get out of a horizontal split; below it the container is made tabbed instead (default: 500; 0 disables). Requires `--autotiling`. |
 | `--stack-min-height` | The same for a vertical split, where the container is stacked instead (default: 300; 0 disables). Requires `--autotiling`. |
@@ -346,7 +367,7 @@ should — an icon not showing up, a workspace not renaming, a rule not firing �
 that's the first place to check:
 
 ```sh
-journalctl -t ws-rename -f
+journalctl -t swayvane -f
 ```
 
 Running with `--verbose` adds a detailed trace of everything the program saw
@@ -354,7 +375,7 @@ and did, including the layout decisions it takes on every focus change.
 
 ## Restarting after a Sway reload
 
-If Sway restarts (for example after a config reload), `ws-rename`
+If Sway restarts (for example after a config reload), `swayvane`
 automatically reconnects and keeps working without needing to be started
 again by hand.
 

@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// logTag identifies the daemon in the system log: `journalctl -t ws-rename`.
-const logTag = "ws-rename"
+// logTag identifies the daemon in the system log: `journalctl -t swayvane`.
+const logTag = "swayvane"
 
 // newLogger builds the logger for the whole daemon. Records go to the system
 // log, which on a systemd machine means journald.

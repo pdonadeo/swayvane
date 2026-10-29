@@ -12,7 +12,7 @@ import (
 
 // maximizeMark is the Sway mark that drives this handler. Marks beginning
 // with an underscore are not drawn in window titles, so it stays invisible.
-const maximizeMark = "_wsr_max"
+const maximizeMark = "_swayvane_max"
 
 // maximizeStash is the workspace the other windows are parked on while one is
 // maximized. Its number puts it after the ten workspaces in everyday use, and
@@ -23,8 +23,8 @@ const maximizeStash = "11:⏸"
 // Marks used for a moment while putting things back, to give `move container
 // to mark` something to aim at.
 const (
-	maximizeDestMark  = "_wsr_max_dest"
-	maximizeAfterMark = "_wsr_max_after"
+	maximizeDestMark  = "_swayvane_max_dest"
+	maximizeAfterMark = "_swayvane_max_after"
 )
 
 // maximizeHandler gives a window the whole workspace for a while without
@@ -44,7 +44,7 @@ const (
 // mark from a plain binding and reports it as a window event this daemon is
 // already subscribed to:
 //
-//	bindsym $mod+z mark --add --toggle _wsr_max
+//	bindsym $mod+z mark --add --toggle _swayvane_max
 //
 // A mark belongs to one window at a time, so marking another window while one
 // is maximized restores the first and maximizes the second by itself.
@@ -91,7 +91,7 @@ type maximizePlan struct {
 func newMaximizeHandler() *maximizeHandler {
 	h := &maximizeHandler{}
 	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
-		h.stateFile = filepath.Join(dir, "ws-rename", "maximize.json")
+		h.stateFile = filepath.Join(dir, "swayvane", "maximize.json")
 	}
 	return h
 }

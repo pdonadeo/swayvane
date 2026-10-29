@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 200" width="680" height="200" role="img" aria-labelledby="title">
+  <title id="title">swayvane</title>
+  <style>
+    /* Tomorrow on light backgrounds, Tomorrow Night on dark ones. */
+    .fg { fill: #1d1f21; } .fg-line { stroke: #1d1f21; }
+    .muted { fill: #8e908c; } .muted-line { stroke: #8e908c; }
+    .orange { fill: #f5871f; } .yellow { fill: #eab700; }
+    .blue { fill: #4271ae; } .green { fill: #718c00; }
+    @media (prefers-color-scheme: dark) {
+      .fg { fill: #e0e0e0; } .fg-line { stroke: #e0e0e0; }
+      .muted { fill: #969896; } .muted-line { stroke: #969896; }
+      .orange { fill: #de935f; } .yellow { fill: #f0c674; }
+      .blue { fill: #81a2be; } .green { fill: #b5bd68; }
+    }
+    line, path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    text { font-family: Hack, "DejaVu Sans Mono", Menlo, Consolas, monospace; font-weight: bold; }
+  </style>
+
+  <!-- the breeze -->
+  <path class="muted-line" stroke-width="4" d="M120 30 q11 -8 22 0 t22 0 t22 0"/>
+  <path class="muted-line" stroke-width="4" d="M138 46 q9 -7 18 0 t18 0"/>
+
+  <!-- the pole, standing on its compass cross -->
+  <line class="muted-line" stroke-width="5" x1="62" y1="160" x2="138" y2="160"/>
+  <path class="muted" d="M54 160 l8 -6 l8 6 l-8 6 z M146 160 l-8 -6 l-8 6 l8 6 z"/>
+  <line class="fg-line" stroke-width="7" x1="100" y1="62" x2="100" y2="184"/>
+  <rect class="fg" x="76" y="182" width="48" height="9" rx="4.5"/>
+  <circle class="orange" cx="100" cy="54" r="9"/>
+
+  <!-- the arrow: a tiled workspace for a tail -->
+  <line class="fg-line" stroke-width="7" x1="62" y1="104" x2="156" y2="104"/>
+  <path class="orange" d="M150 84 L190 104 L150 124 Z"/>
+  <rect class="blue" x="10" y="76" width="26" height="56" rx="5"/>
+  <rect class="yellow" x="40" y="76" width="24" height="26" rx="5"/>
+  <rect class="green" x="40" y="106" width="24" height="26" rx="5"/>
+
+  <!-- the name -->
+  <text x="222" y="118" font-size="80"><tspan class="fg">sway</tspan><tspan class="orange">vane</tspan></text>
+  <text class="muted" x="225" y="158" font-size="18">workspace icons · autotiling · exposé</text>
+</svg>

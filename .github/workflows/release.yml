@@ -109,13 +109,13 @@ jobs:
           echo "Version: $VERSION"
 
           go build -trimpath -ldflags="-s -w -X main.version=$VERSION" \
-            -o "ws-rename-linux-${{ matrix.arch }}" .
-          upx "ws-rename-linux-${{ matrix.arch }}"
+            -o "swayvane-linux-${{ matrix.arch }}" .
+          upx "swayvane-linux-${{ matrix.arch }}"
 
       - name: Upload release asset
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${{ needs.release.outputs.tag }}" \
-            "ws-rename-linux-${{ matrix.arch }}" --clobber \
+            "swayvane-linux-${{ matrix.arch }}" --clobber \
             --repo "${{ github.repository }}"

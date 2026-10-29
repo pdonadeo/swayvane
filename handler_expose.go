@@ -7,8 +7,8 @@ import (
 
 // exposeCommand is the argument of the `nop` binding that toggles the exposé:
 //
-//	bindsym XF86LaunchA nop ws-rename-expose
-const exposeCommand = "ws-rename-expose"
+//	bindsym XF86LaunchA nop swayvane-expose
+const exposeCommand = "swayvane-expose"
 
 // exposeHandler lays out every window of the focused workspace side by side
 // for a while, so that nothing is left hidden behind a tab bar or a stack, and

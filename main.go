@@ -18,7 +18,7 @@ var version = "dev"
 
 // daemonEnvVar is set in the environment of the re-exec'd daemon child so it
 // knows not to daemonize again.
-const daemonEnvVar = "_WS_RENAME_DAEMON"
+const daemonEnvVar = "_SWAYVANE_DAEMON"
 
 // ── Daemonization ─────────────────────────────────────────────────────────────
 
@@ -172,7 +172,7 @@ func rejectSingleDashLongFlags(args []string) {
 			name = name[:eq]
 		}
 		if longFlagNames[name] {
-			fmt.Fprintf(os.Stderr, "ws-rename: unknown flag -%s (did you mean --%s?)\n", name, name)
+			fmt.Fprintf(os.Stderr, "swayvane: unknown flag -%s (did you mean --%s?)\n", name, name)
 			os.Exit(2)
 		}
 	}
@@ -250,7 +250,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Println("ws-rename " + version)
+		fmt.Println("swayvane " + version)
 		os.Exit(0)
 	}
 
@@ -258,13 +258,13 @@ func main() {
 
 	if splitRatio < 1 || splitRatio > 99 {
 		fmt.Fprintf(os.Stderr,
-			"ws-rename: --split-ratio must be between 1 and 99, got %d\n", splitRatio)
+			"swayvane: --split-ratio must be between 1 and 99, got %d\n", splitRatio)
 		os.Exit(2)
 	}
 
 	if tabMinWidth < 0 || stackMinHeight < 0 {
 		fmt.Fprintf(os.Stderr,
-			"ws-rename: --tab-min-width and --stack-min-height cannot be negative\n")
+			"swayvane: --tab-min-width and --stack-min-height cannot be negative\n")
 		os.Exit(2)
 	}
 
