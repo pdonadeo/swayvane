@@ -35,6 +35,10 @@ it did.
 
 ## How it works
 
+<p align="center">
+  <img src="assets/demo/icons.webp" alt="Workspace icons: the bar gains and loses an icon as applications open and close" width="800">
+</p>
+
 Every time you open, close, move, or rename a window, `swayvane` looks at
 which applications are present on each workspace and renames the workspace to
 a string made of the workspace number followed by one icon (or short label)
@@ -147,6 +151,10 @@ rule runs at most once per window.
 
 ### Autotiling
 
+<p align="center">
+  <img src="assets/demo/autotiling.webp" alt="Autotiling: each new window takes 30% of the focused one, and becomes a tab where it would be too thin" width="800">
+</p>
+
 With `--autotiling`, the split direction of the focused window is kept in sync
 with its shape: wider than tall means the next window opens beside it, taller
 than wide means below. Without it, Sway keeps splitting the same axis until
@@ -201,6 +209,10 @@ hand, or take over one of these, it stays exactly as you left it.
 
 ### Maximize without fullscreen
 
+<p align="center">
+  <img src="assets/demo/maximize.webp" alt="Maximize: one window takes the whole workspace, then the layout comes back" width="800">
+</p>
+
 `fullscreen` covers the entire output, bar included, which is more than you
 want when all you need is a good look at one window for a minute. With
 `--maximize` the program offers a gentler version: the marked window is given
@@ -239,6 +251,10 @@ what it would show is parked.
 
 ### Exposé
 
+<p align="center">
+  <img src="assets/demo/expose.webp" alt="Exposé: a tabbed container opens into a split and closes again on the window picked with the mouse" width="800">
+</p>
+
 Tabs and stacks are a great way to keep a workspace tidy, and an equally good
 way to forget what is in it. With `--expose` one key lays out every window of
 the focused workspace side by side, and pressing it again puts everything back
@@ -269,6 +285,10 @@ split.
 
 ### Scattered exposé
 
+<p align="center">
+  <img src="assets/demo/scatter.webp" alt="Scattered exposé: every window, hidden tabs included, is dealt out over the screen and picked with a click or a number key" width="800">
+</p>
+
 `--scatter` is the exposé taken one step further, closer to the one on macOS:
 every window of the focused workspace leaves the layout, becomes floating and
 is dealt out over the screen, roughly in the order they were on screen. Click a
@@ -295,6 +315,10 @@ bindsym $mod+Shift+F4 nop swayvane-scatter-uniform
   largest that fits them all on the screen. The screen fills better with
   windows of mixed shapes, and their sizes still tell which is which, but next
   to a big window a small one stays small.
+
+<p align="center">
+  <img src="assets/demo/scatter-grid.webp" alt="Scattered exposé on a grid: the same windows, each shrunk to fit a cell of the same size" width="800">
+</p>
 
 Neither enlarges a window. Either key ends a scatter started with the other.
 
